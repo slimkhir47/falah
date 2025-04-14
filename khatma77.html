@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ختمة قرآنية بنية نصرة غزة</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .khatma-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2980b9;
+      margin: 30px 0 10px;
+      cursor: pointer;
+    }
+    button {
+      background-color: #2ecc71;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      flex: 1 1 45%;
+      box-sizing: border-box;
+      min-width: 220px;
+      transition: 0.3s;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    .selected {
+      background-color: #f1c40f !important;
+      color: #000;
+    }
+    .message {
+      font-size: 18px;
+      color: #e74c3c;
+      margin-top: 20px;
+    }
+    #resetButton {
+      display: none;
+      background-color: #e74c3c;
+      margin-top: 20px;
+    }
+    #selectedCount {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #2980b9;
+    }
+    .progress-bar-container {
+      width: 100%;
+      background-color: #ddd;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      height: 20px;
+      border-radius: 20px;
+      background-color: #2ecc71;
+      width: 0%;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>ختمة قرآنية بنية نصرة غزة</h1>
+  <p>اختر القصاصة التي تريد قراءتها من أي ختمة متاحة (حسب الترتيب).</p>
+
+  <div id="selectedCount">عدد القصاصات المختارة: 0 / 300</div>
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div id="buttonContainer"></div>
+  <div class="message" id="message"></div>
+
+  <button id="resetButton" onclick="resetData()">إعادة تهيئة جميع الاختيارات</button>
+</div>
+
+<script>
+  const totalChapters = 30;
+  const totalKhatmas = 10;
+  const totalSelections = totalChapters * totalKhatmas; // العدد الإجمالي للقصاصات
+  const buttonContainer = document.getElementById("buttonContainer");
+  const messageElement = document.getElementById("message");
+  const selectedCountElement = document.getElementById("selectedCount");
+  const progressBarElement = document.getElementById("progressBar");
+
+  let clickCount = 0; // عدد النقرات على الختمة 10
+  let passwordVerified = false; // تحقق من كلمة السر
+
+  // وظيفة للتحقق مما إذا كانت الختمة السابقة مكتملة
+  function isPreviousKhatmaComplete(k) {
+    if (k === 1) return true;
+    const prevKey = `selectedChapters${k - 1}`;
+    const prevSelected = JSON.parse(localStorage.getItem(prevKey)) || [];
+    return prevSelected.length === totalChapters;
+  }
+
+  // تهيئة الأزرار
+  function initializeButtons() {
+    buttonContainer.innerHTML = "";
+    let allComplete = true;
+
+    let selectedCount = 0; // عداد القصاصات المختارة
+
+    for (let k = 1; k <= totalKhatmas; k++) {
+      const khatmaKey = `selectedChapters${k}`;
+      const selectedChapters = JSON.parse(localStorage.getItem(khatmaKey)) || [];
+      const previousComplete = isPreviousKhatmaComplete(k);
+
+      const title = document.createElement("div");
+      title.className = "khatma-title";
+      title.innerText = `الختمة ${k}`;
+      if (k === 10) {
+        title.onclick = () => promptPassword(k); // عند النقر على الختمة 10
+      }
+
+      buttonContainer.appendChild(title);
+
+      const group = document.createElement("div");
+      group.className = "button-container";
+
+      let khatmaComplete = true;
+
+      for (let i = 1; i <= totalChapters; i++) {
+        const button = document.createElement("button");
+        button.innerText = `الحزب ${2*i - 1} و ${2*i}`;
+
+        if (selectedChapters.includes(i)) {
+          button.classList.add("selected");
+          button.disabled = true;
+          selectedCount++; // زيادة العداد عندما يتم اختيار القصاصة
+        } else if (!previousComplete) {
+          button.disabled = true;
+          button.title = "أكمل الختمة السابقة أولاً.";
+          khatmaComplete = false;
+        } else {
+          button.onclick = () => selectChapter(i, k);
+          khatmaComplete = false;
+          allComplete = false;
+        }
+
+        group.appendChild(button);
+      }
+
+      buttonContainer.appendChild(group);
+    }
+
+    messageElement.innerText = allComplete
+      ? "جميع الختمات مكتملة! جزاكم الله خيرًا."
+      : "";
+
+    // تحديث عدد القصاصات المختارة
+    selectedCountElement.innerText = `عدد القصاصات المختارة: ${selectedCount} / ${totalSelections}`;
+
+    // تحديث مقياس التقدم
+    const progressPercentage = (selectedCount / totalSelections) * 100;
+    progressBarElement.style.width = `${progressPercentage}%`;
+  }
+
+  // اختيار الحزب وتخزينه في الذاكرة المحلية
+  function selectChapter(chapter, khatma) {
+    const storageKey = `selectedChapters${khatma}`;
+    const selectedChapters = JSON.parse(localStorage.getItem(storageKey)) || [];
+
+    if (!selectedChapters.includes(chapter)) {
+      selectedChapters.push(chapter);
+      localStorage.setItem(storageKey, JSON.stringify(selectedChapters));
+    }
+
+    initializeButtons();
+  }
+
+  // دالة لإعادة تهيئة جميع البيانات
+  function resetData() {
+    localStorage.clear();
+    initializeButtons();
+    alert("تم مسح جميع البيانات بنجاح.");
+    document.getElementById("resetButton").style.display = "none";
+  }
+
+  // إضافة ميزة كلمة السر
+  function promptPassword(khatma) {
+    if (clickCount >= 5) {
+      const password = prompt("أدخل كلمة السر:");
+
+      if (password === "gaza@2025") {
+        passwordVerified = true;
+        alert("تم التحقق! ✅");
+        document.getElementById("resetButton").style.display = "block";
+        clickCount = 0; // إعادة تعيين عدد النقرات بعد التحقق من كلمة السر
+      } else {
+        alert("كلمة السر غير صحيحة!");
+      }
+    } else {
+      clickCount++;
+    }  
+  }
+
+  // تهيئة الأزرار في البداية
+  initializeButtons();
+</script>
+
+</body>
+</html>

@@ -71,18 +71,6 @@
       margin-bottom: 20px;
       color: #2980b9;
     }
-    .progress-bar-container {
-      width: 100%;
-      background-color: #ddd;
-      border-radius: 20px;
-      margin-bottom: 20px;
-    }
-    .progress-bar {
-      height: 20px;
-      border-radius: 20px;
-      background-color: #2ecc71;
-      width: 0%;
-    }
   </style>
 </head>
 <body>
@@ -92,10 +80,6 @@
   <p>اختر القصاصة التي تريد قراءتها من أي ختمة متاحة (حسب الترتيب).</p>
 
   <div id="selectedCount">عدد القصاصات المختارة: 0 / 300</div>
-  <div class="progress-bar-container">
-    <div class="progress-bar" id="progressBar"></div>
-  </div>
-
   <div id="buttonContainer"></div>
   <div class="message" id="message"></div>
 
@@ -103,124 +87,57 @@
 </div>
 
 <script>
+  // عدد القصاصات
   const totalChapters = 30;
   const totalKhatmas = 10;
-  const totalSelections = totalChapters * totalKhatmas; // العدد الإجمالي للقصاصات
+  const totalSelections = totalChapters * totalKhatmas;
   const buttonContainer = document.getElementById("buttonContainer");
   const messageElement = document.getElementById("message");
   const selectedCountElement = document.getElementById("selectedCount");
-  const progressBarElement = document.getElementById("progressBar");
 
-  let clickCount = 0; // عدد النقرات على الختمة 10
-  let passwordVerified = false; // تحقق من كلمة السر
-
-  // وظيفة للتحقق مما إذا كانت الختمة السابقة مكتملة
-  function isPreviousKhatmaComplete(k) {
-    if (k === 1) return true;
-    const prevKey = `selectedChapters${k - 1}`;
-    const prevSelected = JSON.parse(localStorage.getItem(prevKey)) || [];
-    return prevSelected.length === totalChapters;
-  }
+  let selectedCount = 0;
 
   // تهيئة الأزرار
   function initializeButtons() {
     buttonContainer.innerHTML = "";
     let allComplete = true;
 
-    let selectedCount = 0; // عداد القصاصات المختارة
-
     for (let k = 1; k <= totalKhatmas; k++) {
-      const khatmaKey = `selectedChapters${k}`;
-      const selectedChapters = JSON.parse(localStorage.getItem(khatmaKey)) || [];
-      const previousComplete = isPreviousKhatmaComplete(k);
-
       const title = document.createElement("div");
       title.className = "khatma-title";
       title.innerText = `الختمة ${k}`;
-      if (k === 10) {
-        title.onclick = () => promptPassword(k); // عند النقر على الختمة 10
-      }
+      title.onclick = () => selectChapter(k);
 
       buttonContainer.appendChild(title);
-
-      const group = document.createElement("div");
-      group.className = "button-container";
-
-      let khatmaComplete = true;
-
-      for (let i = 1; i <= totalChapters; i++) {
-        const button = document.createElement("button");
-        button.innerText = `الحزب ${2*i - 1} و ${2*i}`;
-
-        if (selectedChapters.includes(i)) {
-          button.classList.add("selected");
-          button.disabled = true;
-          selectedCount++; // زيادة العداد عندما يتم اختيار القصاصة
-        } else if (!previousComplete) {
-          button.disabled = true;
-          button.title = "أكمل الختمة السابقة أولاً.";
-          khatmaComplete = false;
-        } else {
-          button.onclick = () => selectChapter(i, k);
-          khatmaComplete = false;
-          allComplete = false;
-        }
-
-        group.appendChild(button);
-      }
-
-      buttonContainer.appendChild(group);
     }
-
-    messageElement.innerText = allComplete
-      ? "جميع الختمات مكتملة! جزاكم الله خيرًا."
-      : "";
-
-    // تحديث عدد القصاصات المختارة
-    selectedCountElement.innerText = `عدد القصاصات المختارة: ${selectedCount} / ${totalSelections}`;
-
-    // تحديث مقياس التقدم
-    const progressPercentage = (selectedCount / totalSelections) * 100;
-    progressBarElement.style.width = `${progressPercentage}%`;
   }
 
-  // اختيار الحزب وتخزينه في الذاكرة المحلية
-  function selectChapter(chapter, khatma) {
-    const storageKey = `selectedChapters${khatma}`;
-    const selectedChapters = JSON.parse(localStorage.getItem(storageKey)) || [];
-
-    if (!selectedChapters.includes(chapter)) {
-      selectedChapters.push(chapter);
-      localStorage.setItem(storageKey, JSON.stringify(selectedChapters));
-    }
-
-    initializeButtons();
+  // اختيار القصاصة
+  function selectChapter(khatma) {
+    fetch('https://script.google.com/macros/s/AKfycbz4Hwd3KqvNptemlB7mJ8ga9i6MRSS_kXkD2kDObRJOgFPKSCn7WRdPZdu2pbpePx3xBA/exec', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ khatma: khatma })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('تم إرسال البيانات بنجاح:', data);
+      selectedCount++;  // زيادة العداد
+      selectedCountElement.innerText = `عدد القصاصات المختارة: ${selectedCount} / ${totalSelections}`;
+    })
+    .catch((error) => {
+      console.error('حدث خطأ:', error);
+    });
   }
 
-  // دالة لإعادة تهيئة جميع البيانات
+  // إعادة تهيئة البيانات
   function resetData() {
     localStorage.clear();
     initializeButtons();
     alert("تم مسح جميع البيانات بنجاح.");
     document.getElementById("resetButton").style.display = "none";
-  }
-
-  // إضافة ميزة كلمة السر
-  function promptPassword(khatma) {
-    if (clickCount >= 5) {
-      const password = prompt("أدخل كلمة السر:");
-
-      if (password === "gaza@2025") {
-        passwordVerified = true;
-        alert("تم التحقق! ✅");
-        document.getElementById("resetButton").style.display = "block";
-        clickCount = 0; // إعادة تعيين عدد النقرات بعد التحقق من كلمة السر
-      } else {
-        alert("كلمة السر غير صحيحة!");
-      }
-    } else {
-      clickCount++;
-    }  
   }
 
   // تهيئة الأزرار في البداية
